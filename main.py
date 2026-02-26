@@ -2,10 +2,22 @@ import speech_recognition as sr
 import webbrowser
 import pyttsx3
 import musicLibrary
+import threading
+
 # import pocketsphinx
 
 r = sr.Recognizer()
 engine = pyttsx3.init()
+mic = sr.Microphone()
+
+running = True
+
+
+def speak(text):
+    def run():
+        engine.say(text)
+        engine.runAndWait()
+    threading.Thread(target=run).start()
 
 
 def speak(text):
@@ -13,6 +25,13 @@ def speak(text):
     engine.runAndWait()
 
 def ProcessCommand(c):
+    global running
+    
+    if "stop" in c or "exit" in c or "quit" in c or "bye" in c or "go to sleep" in c:
+        speak("Alright sir. Cherry going offline.")
+        running = False
+        return
+    
     if "open google" in c.lower():
         webbrowser.open("https://google.com")
     elif "open facebook" in c.lower():
@@ -26,24 +45,24 @@ def ProcessCommand(c):
     elif "open chat" in c.lower():
         webbrowser.open("https://chat.openai.com/")
     elif c.lower().startswith("play"):
-        song = c.lower().split(" ")[1]
-        link = musicLibrary.music[song]
+        song = c.lower().replace("play", "").strip()
+        link = musicLibrary.music.get(song)
         if link:
             webbrowser.open(link)
         else:
-            speak("Song not found sir")  
+            speak("I couldn't find that song sir")
+ 
     else:
-        #Let Gemini handle the request
-        pass
+        speak("I didn't understand that yet sir")
   
 if __name__ == "__main__":
     speak("How may i help you sir")
     
-    with sr.Microphone() as source:
+    with mic as source:
         r.adjust_for_ambient_noise(source, duration=0.8)
         print("Microphone calibrated")
         
-    while True:
+    while running:
         #Listen for the wake word "Cherry"
         # obtain audio from the microphone
 
@@ -52,17 +71,17 @@ if __name__ == "__main__":
         
         try:
             print("Listening Sir.......")
-            with sr.Microphone() as source:
+            with mic as source:
                     audio = r.listen(source, timeout= 4, phrase_time_limit= 4)
                     
             word = r.recognize_google(audio).lower()
             print("Heard:", word)
 
-            if word == "cherry":
+            if "cherry" in word:
                 speak("Waiting for command sir")
                 
                 #Listen to Command
-                with sr.Microphone() as source:
+                with mic as source:
                     print("Cherry is Listening Sir.......")
                     audio = r.listen(source, phrase_time_limit=5)
                     
