@@ -1,13 +1,12 @@
-from google import genai
-import os
+"""Quick Gemini API test — run: python client.py"""
 
-client = genai.Client(api_key=os.getenv("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"))
-
-response = client.models.generate_content(
-    model="gemini-1.5-flash",
-    contents="Explain Unreal Engine 5 in simple terms."
-)
-
-print(response.text)
+from cherry.brain import Brain
 
 
+def main() -> None:
+    brain = Brain()
+    print(brain.chat("Say hello in one sentence."))
+
+
+if __name__ == "__main__":
+    main()
