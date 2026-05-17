@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+chromadb
+python-multipart
+python-dotenv
+google-generativeai
+google-genai
+edge-tts
+SpeechRecognition
+pypdf
+python-pptx
+Pillow

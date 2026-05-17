@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cherry-50: #fff0f1;
+  --color-cherry-100: #ffe4e6;
+  --color-cherry-200: #fecdd3;
+  --color-cherry-300: #fda4af;
+  --color-cherry-400: #fb7185;
+  --color-cherry-500: #f43f5e;
+  --color-cherry-600: #e11d48;
+  --color-cherry-700: #be123c;
+  --color-cherry-800: #9f1239;
+  --color-cherry-900: #881337;
+  --color-cherry-950: #4c0519;
+
+  --color-dark-900: #0f0f11;
+  --color-dark-800: #18181b;
+  --color-dark-700: #27272a;
+}
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #09090b;
+  }
+
+  .dark {
+    --background: #09090b;
+    --foreground: #fafafa;
+  }
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+}
+
+/* Custom Utilities */
+@layer utilities {
+  .glass {
+    background: rgba(24, 24, 27, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  .glass-cherry {
+    background: rgba(225, 29, 72, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(225, 29, 72, 0.2);
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 10px rgba(225, 29, 72, 0.5), 0 0 20px rgba(225, 29, 72, 0.3);
+  }
+  
+  .box-glow {
+    box-shadow: 0 0 15px rgba(225, 29, 72, 0.2), 0 0 30px rgba(225, 29, 72, 0.1);
+  }
+}
