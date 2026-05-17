@@ -1,0 +1,62 @@
+# Cherry AI Rebuild Plan
+
+This document outlines the step-by-step implementation plan for rebuilding Cherry AI based on the Master Feature & System Prompt. We will use a modern client-server architecture to ensure high performance, security, and scalability.
+
+## Tech Stack Decisions
+- **Backend:** FastAPI (Python 3) - Handles AI logic, PDF processing, local file system sandboxing, and voice (STT/TTS).
+- **Frontend:** Next.js (React) + TailwindCSS + Framer Motion (for UI/UX animations).
+- **Database:** SQLite (Relational data, chats, settings) + ChromaDB (Vector embeddings for memory and study mode).
+- **Desktop Wrapper:** Tauri (or Electron) for the final executable.
+
+## Phase 1: Foundation & Architecture Setup
+1. **Repository Restructuring:**
+   - Archive the old Python code into a `legacy/` directory.
+   - Create a monorepo structure: `/frontend` and `/backend`.
+2. **Backend Initialization (FastAPI):**
+   - Set up the FastAPI server, routing structure, and dependency injection.
+   - Implement the Safe File Management system (sandboxed to specific user directories).
+   - Set up SQLite and ChromaDB connections.
+3. **Frontend Initialization (Next.js):**
+   - Initialize Next.js project with TailwindCSS.
+   - Create the core layout, theming system (Dark Mode, Futuristic aesthetic), and routing setup.
+   - Set up WebSocket/HTTP API clients to talk to the FastAPI backend.
+
+## Phase 2: Core Chat & Memory System
+1. **LLM Integration (Backend):**
+   - Create a unified AI module supporting Ollama, LM Studio, and OpenRouter APIs.
+   - Build the Memory System (saving user preferences, extracting facts via ChromaDB).
+2. **Chat UI (Frontend):**
+   - Build a responsive chat interface.
+   - Support text streaming, Markdown rendering (for code generation), and conversation history.
+
+## Phase 3: Voice & Personality
+1. **Audio Pipeline (Backend):**
+   - Integrate robust STT (Speech-to-Text) and TTS (Text-to-Speech) pipelines.
+   - Implement wake-word detection (optional, may require local background process).
+2. **Voice Interface (Frontend):**
+   - Add voice recording capabilities, audio visualizers, and playback controls.
+
+## Phase 4: Study Mode & PDF System
+1. **Document Processing (Backend):**
+   - Implement PDF parsing, text extraction, and chunking.
+   - Build RAG (Retrieval-Augmented Generation) for asking questions against PDFs.
+2. **Study UI (Frontend):**
+   - Build the Study Hub dashboard (upload PDFs, view summaries, generate flashcards).
+
+## Phase 5: Image Generation & Gallery
+1. **Image Generation (Backend):**
+   - Integrate Stable Diffusion / external image APIs.
+2. **Gallery UI (Frontend):**
+   - Build the Image Gallery grid, tagging system, and metadata viewing.
+
+## Phase 6: Productivity & Creator Modes
+1. **Tools & Workflows:**
+   - Build Notes, Reminders, and Daily Planner database models.
+   - Create specialized prompts and UI views for Creator Mode and Game Dev Support.
+
+## Phase 7: Desktop Integration & Polish
+1. **Tauri/Electron Setup:**
+   - Wrap the web app into a desktop executable.
+   - Finalize system tray integration, deep linking, and hardware access (mic).
+2. **UI Polish:**
+   - Refine animations, micro-interactions, and visual design to ensure a premium, JARVIS-like feel.
