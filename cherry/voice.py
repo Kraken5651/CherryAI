@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import tempfile
 import threading
 import time
+import wave
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 import edge_tts
+import numpy as np
 import pygame
-import speech_recognition as sr
+import sounddevice as sd
 
 from cherry import config
 
@@ -36,9 +39,12 @@ class VoiceController:
         self._thread: threading.Thread | None = None
         self._speaking = threading.Event()
         self._halt_speech = threading.Event()
-        self._recognizer = sr.Recognizer()
-        self._mic = sr.Microphone()
         self._pygame_ready = False
+
+        # Audio settings for sounddevice
+        self._sample_rate = 16000
+        self._channels = 1
+        self._input_device = self._find_working_mic()
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -71,20 +77,98 @@ class VoiceController:
         self.always_listen = not self.always_listen
         return self.always_listen
 
-    def listen_once(self) -> str | None:
+    # ── Microphone capture (sounddevice) ─────────────────────────
+
+    def _find_working_mic(self) -> int | None:
+        """Find a microphone that actually captures audio."""
+        import sounddevice as sd
+        import numpy as np
+
+        # Try the system default first, then scan all input devices
+        candidates = [None]  # None = system default
         try:
-            with self._mic as source:
-                self._recognizer.adjust_for_ambient_noise(source, duration=0.3)
-                audio = self._recognizer.listen(source, timeout=6, phrase_time_limit=12)
-            return self._recognizer.recognize_google(audio)
-        except sr.WaitTimeoutError:
+            devices = sd.query_devices()
+            for i, d in enumerate(devices):
+                if d['max_input_channels'] > 0:
+                    candidates.append(i)
+        except Exception:
+            pass
+
+        for dev in candidates:
+            try:
+                test = sd.rec(
+                    int(0.3 * self._sample_rate),
+                    samplerate=self._sample_rate,
+                    channels=1,
+                    dtype='int16',
+                    device=dev,
+                )
+                sd.wait()
+                rms = np.sqrt(np.mean(test.astype(np.float32) ** 2))
+                # If we get any signal at all, use this device
+                if rms > 5:
+                    return dev
+            except Exception:
+                continue
+        # Fallback: return None (system default)
+        return None
+
+    def _record_chunk(self, duration: float) -> np.ndarray | None:
+        """Record a chunk of audio. Returns numpy array or None on error."""
+        try:
+            audio = sd.rec(
+                int(duration * self._sample_rate),
+                samplerate=self._sample_rate,
+                channels=self._channels,
+                dtype="int16",
+                device=self._input_device,
+            )
+            sd.wait()
+            return audio
+        except Exception:
             return None
+
+    def _numpy_to_wav_bytes(self, audio: np.ndarray) -> bytes:
+        """Convert a numpy int16 array into WAV bytes for SpeechRecognition."""
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wf:
+            wf.setnchannels(self._channels)
+            wf.setsampwidth(2)  # 16-bit
+            wf.setframerate(self._sample_rate)
+            wf.writeframes(audio.tobytes())
+        return buf.getvalue()
+
+    def _recognize(self, audio_np: np.ndarray) -> str | None:
+        """Send captured audio to Google STT via SpeechRecognition."""
+        import speech_recognition as sr
+
+        wav_data = self._numpy_to_wav_bytes(audio_np)
+        recognizer = sr.Recognizer()
+        audio = sr.AudioData(wav_data[44:], self._sample_rate, 2)  # skip WAV header
+        try:
+            text = recognizer.recognize_google(audio)
+            return text.strip() if text else None
         except sr.UnknownValueError:
             return None
+        except sr.RequestError as e:
+            if self.on_status:
+                self.on_status(f"STT network error: {e}")
+            return None
+
+    # ── Single listen (for the Mic button) ───────────────────────
+
+    def listen_once(self) -> str | None:
+        try:
+            audio = self._record_chunk(6.0)
+            if audio is None:
+                return None
+            return self._recognize(audio)
         except Exception as e:
             if self.on_status:
                 self.on_status(f"Listen error: {e}")
             return None
+
+    # ── TTS (edge-tts + pygame) ──────────────────────────────────
 
     def _ensure_audio(self) -> None:
         if not self._pygame_ready:
@@ -117,15 +201,17 @@ class VoiceController:
                     pygame.mixer.music.stop()
                     break
                 pygame.time.Clock().tick(10)
+            # Unload before deleting to avoid file lock
+            pygame.mixer.music.unload()
         finally:
             try:
                 tmp.unlink(missing_ok=True)
             except OSError:
-                pass
+                pass  # file still locked, will be cleaned up later
+
+    # ── Background voice loop ────────────────────────────────────
 
     def _loop(self) -> None:
-        with self._mic as source:
-            self._recognizer.adjust_for_ambient_noise(source, duration=0.8)
         if self.on_status:
             self.on_status("Voice ready.")
 
@@ -133,39 +219,42 @@ class VoiceController:
             if not self.enabled or self._speaking.is_set():
                 time.sleep(0.3)
                 continue
-            try:
-                with self._mic as source:
-                    if self.on_status:
-                        self.on_status("Listening...")
-                    audio = self._recognizer.listen(
-                        source, timeout=4, phrase_time_limit=8
-                    )
-                transcript = self._recognizer.recognize_google(audio).strip()
-            except sr.WaitTimeoutError:
-                continue
-            except sr.UnknownValueError:
-                continue
-            except Exception as e:
-                if self.on_status:
-                    self.on_status(f"STT error: {e}")
+
+            # Record a short chunk to check for speech
+            if self.on_status:
+                self.on_status("Listening...")
+
+            audio = self._record_chunk(4.0)
+            if audio is None:
+                time.sleep(0.5)
                 continue
 
+            # Check if audio is mostly silence (skip STT call if so)
+            rms = np.sqrt(np.mean(audio.astype(np.float32) ** 2))
+            if rms < 50:  # silence threshold (very conservative)
+                continue
+
+            # Try to transcribe
+            transcript = self._recognize(audio)
             if not transcript:
                 continue
 
             low = transcript.lower()
             if not self.always_listen:
-                if config.WAKE_WORD not in low:
+                # Wake word mode: require "cherry" or "start cherry"
+                wake_trigger = config.WAKE_WORD.lower()
+                if wake_trigger not in low and f"start {wake_trigger}" not in low:
                     continue
+
                 if self.on_status:
-                    self.on_status("Wake word heard.")
-                try:
-                    with self._mic as source:
-                        audio = self._recognizer.listen(
-                            source, timeout=5, phrase_time_limit=10
-                        )
-                    transcript = self._recognizer.recognize_google(audio).strip()
-                except (sr.WaitTimeoutError, sr.UnknownValueError):
+                    self.on_status(f"Wake word heard! Listening for command...")
+
+                # Now record the actual command
+                cmd_audio = self._record_chunk(8.0)
+                if cmd_audio is None:
+                    continue
+                transcript = self._recognize(cmd_audio)
+                if not transcript:
                     continue
 
             if self.on_status:

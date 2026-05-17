@@ -1,4 +1,4 @@
-from cherry.tools import browser, files, images, shell, system_win
+from . import browser, files, images, shell, system_win, web_search
 
 TOOL_HANDLERS = {
     "open_website": browser.open_website,
@@ -10,6 +10,7 @@ TOOL_HANDLERS = {
     "write_file": files.write_file,
     "list_dir": files.list_dir,
     "run_command": shell.run_command,
+    "web_search": web_search.web_search,
 }
 
 TOOL_DECLARATIONS = [
@@ -118,6 +119,17 @@ TOOL_DECLARATIONS = [
                 },
             },
             "required": ["command"],
+        },
+    },
+    {
+        "name": "web_search",
+        "description": "Search the web for current information, facts, weather, or news using DuckDuckGo.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The search query."},
+            },
+            "required": ["query"],
         },
     },
 ]

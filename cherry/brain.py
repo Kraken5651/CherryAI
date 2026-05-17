@@ -19,6 +19,8 @@ For voice interactions, keep replies concise (1-3 sentences) unless the user ask
 Refuse destructive actions; do not help with harmful commands.
 When the user asks to draw, create, or generate art, use generate_image.
 When coding, use read_file, write_file, list_dir, and run_command as needed.
+Your wake word is "cherry". Users can say "Cherry" or "Start Cherry" to activate you via voice.
+When in standby mode, you only respond after hearing the wake word.
 """
 
 MAX_TOOL_ROUNDS = 8
@@ -90,6 +92,7 @@ class Brain:
         self.client = self._clients[0]
         self.model = config.GEMINI_MODEL
         self._contents: list[types.Content] = []
+        self._lock = threading.Lock()
         self._cancel = threading.Event()
         self._tools = types.Tool(
             function_declarations=[
@@ -113,12 +116,14 @@ class Brain:
         return self._cancel.is_set()
 
     def clear_history(self) -> None:
-        self._contents = []
+        with self._lock:
+            self._contents = []
 
     def _trim_history(self) -> None:
         max_items = config.MAX_HISTORY_ITEMS
-        if len(self._contents) > max_items:
-            self._contents = self._contents[-max_items:]
+        with self._lock:
+            if len(self._contents) > max_items:
+                self._contents = self._contents[-max_items:]
 
     def _config(self, voice: bool) -> types.GenerateContentConfig:
         extra = (
@@ -213,12 +218,13 @@ class Brain:
         if stop.is_set():
             return "Stopped."
 
-        self._contents.append(
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=user_message)],
+        with self._lock:
+            self._contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=user_message)],
+                )
             )
-        )
         self._trim_history()
 
         for _ in range(MAX_TOOL_ROUNDS):
@@ -247,7 +253,8 @@ class Brain:
                 )
                 return msg
 
-            self._contents.append(candidate.content)
+            with self._lock:
+                self._contents.append(candidate.content)
             self._trim_history()
 
             function_calls = [
@@ -279,16 +286,19 @@ class Brain:
                     )
                 )
 
-            self._contents.append(types.Content(role="user", parts=tool_parts))
+            with self._lock:
+                self._contents.append(types.Content(role="user", parts=tool_parts))
             self._trim_history()
 
         return "I hit the tool limit for this request. Please try again with a simpler ask."
 
     def _rollback_last_user(self) -> None:
-        if self._contents and self._contents[-1].role == "user":
-            self._contents.pop()
+        with self._lock:
+            if self._contents and self._contents[-1].role == "user":
+                self._contents.pop()
 
     def _append_model_text(self, text: str) -> None:
-        self._contents.append(
-            types.Content(role="model", parts=[types.Part.from_text(text=text)])
-        )
+        with self._lock:
+            self._contents.append(
+                types.Content(role="model", parts=[types.Part.from_text(text=text)])
+            )

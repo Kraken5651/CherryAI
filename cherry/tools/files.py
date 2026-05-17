@@ -1,26 +1,10 @@
-from pathlib import Path
-
-from cherry import config
+from .common import resolve_allowed_path
 
 _MAX_READ = 80_000
 
 
-def _resolve_allowed(path: str) -> Path | None:
-    try:
-        resolved = Path(path).expanduser().resolve()
-    except (OSError, ValueError):
-        return None
-    for root in config.ALLOWED_PATHS:
-        try:
-            resolved.relative_to(root.resolve())
-            return resolved
-        except ValueError:
-            continue
-    return None
-
-
 def read_file(path: str) -> str:
-    resolved = _resolve_allowed(path)
+    resolved = resolve_allowed_path(path)
     if not resolved:
         return f"Access denied or invalid path: {path}"
     if not resolved.is_file():
@@ -37,7 +21,7 @@ def read_file(path: str) -> str:
 
 
 def write_file(path: str, content: str) -> str:
-    resolved = _resolve_allowed(path)
+    resolved = resolve_allowed_path(path)
     if not resolved:
         return f"Access denied or invalid path: {path}"
     try:
@@ -49,7 +33,7 @@ def write_file(path: str, content: str) -> str:
 
 
 def list_dir(path: str) -> str:
-    resolved = _resolve_allowed(path)
+    resolved = resolve_allowed_path(path)
     if not resolved:
         return f"Access denied or invalid path: {path}"
     if not resolved.is_dir():

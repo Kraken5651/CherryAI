@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from .common import resolve_allowed_path
 
 _APP_ALIASES = {
     "chrome": ["chrome", "google chrome"],
@@ -55,7 +56,10 @@ def open_path(path: str) -> str:
     if low in _USER_FOLDERS:
         resolved = _USER_FOLDERS[low]
     else:
-        resolved = Path(p).expanduser().resolve()
+        # Security: Resolve via sandbox check
+        resolved = resolve_allowed_path(p)
+        if not resolved:
+            return f"Access denied or invalid path: {path}"
 
     if not resolved.exists():
         return f"Path does not exist: {resolved}"

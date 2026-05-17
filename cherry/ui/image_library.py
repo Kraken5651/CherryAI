@@ -123,7 +123,7 @@ class ImageLibraryPanel(ctk.CTkFrame):
             height=28,
             fg_color=T.BTN_PRIMARY,
             hover_color=T.BTN_PRIMARY_HOVER,
-            command=lambda p=path: os.startfile(str(p)),  # type: ignore[attr-defined]
+            command=lambda p=path: os.startfile(str(p)) if p.exists() else None,  # type: ignore[attr-defined]
         ).pack(side="left", padx=2)
         ctk.CTkButton(
             btns,

@@ -1,6 +1,6 @@
 import webbrowser
 
-import musicLibrary
+from cherry import musicLibrary
 
 _SITES = {
     "google": "https://google.com",
