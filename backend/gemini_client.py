@@ -60,19 +60,21 @@ def generate_with_fallback(model: str | None = None, contents=None, **kwargs):
         for _ in range(len(clients)):
             try:
                 client = get_client()
-                return client.models.generate_content(model=m, contents=contents, **kwargs)
+                response = client.models.generate_content(model=m, contents=contents, **kwargs)
+                print(f"[Cherry] Successfully generated content using model: {m}")
+                return response
             except Exception as e:
                 err_str = str(e)
-                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                    print(f"[Cherry] Key {_current_index + 1} rate-limited on {m}, rotating...")
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+                    print(f"[Cherry] Key {_current_index + 1} rate-limited/quota exceeded on {m}, rotating...")
                     rotate_client()
                     last_error = e
                     continue
-                elif "404" in err_str or "not found" in err_str.lower():
-                    print(f"[Cherry] Model {m} not available, trying next...")
+                else:
+                    print(f"[Cherry] Model {m} failed with error ({err_str}). Trying next model...")
                     last_error = e
                     break  # Skip to next model
-                else:
-                    raise  # Non-recoverable error
     
-    raise last_error  # All keys + models exhausted
+    if last_error:
+        raise last_error
+    raise RuntimeError("All models and keys exhausted without a specific error.")
