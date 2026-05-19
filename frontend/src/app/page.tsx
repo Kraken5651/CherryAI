@@ -453,7 +453,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-dark-900 text-gray-100 overflow-hidden selection:bg-cherry-500/30">
+    <div className="flex h-screen bg-dark-900 text-gray-100 overflow-hidden selection:bg-cherry-500/30 futuristic-grid scanline-overlay">
       
       {/* Sidebar - Thin, futuristic */}
       <aside className="w-20 lg:w-64 flex flex-col border-r border-cherry-900/30 bg-dark-800/50 backdrop-blur-xl relative z-10">

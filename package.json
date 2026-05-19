@@ -1,0 +1,20 @@
+{
+  "name": "cherry-ai-desktop",
+  "version": "1.0.0",
+  "description": "JARVIS-like Cherry AI Desktop assistant",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "cherry-ai",
+    "jarvis",
+    "assistant",
+    "electron"
+  ],
+  "author": "CherryAI Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}
