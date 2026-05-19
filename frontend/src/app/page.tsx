@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Cpu, Sparkles, Mic, Settings, MoreVertical, BookOpen, Image as ImageIcon, Paperclip, X, Paintbrush, Type, RotateCw, Download, FileText, FolderEdit } from "lucide-react";
+import { Send, Bot, User, Cpu, Sparkles, Mic, Settings, MoreVertical, BookOpen, Image as ImageIcon, Paperclip, X, Paintbrush, Type, RotateCw, Download, FileText, FolderEdit, Compass } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -481,6 +481,10 @@ export default function ChatPage() {
           <Link href="/gallery" className="w-full flex items-center gap-3 p-3 rounded-lg text-gray-400 hover:text-cherry-400 hover:bg-cherry-900/20 transition-all">
             <ImageIcon className="w-5 h-5 shrink-0" />
             <span className="hidden lg:block text-sm font-medium">Gallery</span>
+          </Link>
+          <Link href="/productivity" className="w-full flex items-center gap-3 p-3 rounded-lg text-gray-400 hover:text-cherry-400 hover:bg-cherry-900/20 transition-all">
+            <Compass className="w-5 h-5 shrink-0" />
+            <span className="hidden lg:block text-sm font-medium">Productivity</span>
           </Link>
           <button
             onClick={() => setShowSavedEditsModal(true)}
